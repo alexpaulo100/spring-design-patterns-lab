@@ -44,7 +44,7 @@ public class ClienteRestController {
     public ResponseEntity<Cliente> atualizar(@PathVariable Long id,
                                              @RequestBody Cliente cliente) {
         clienteService.atualizar(id, cliente);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(cliente);
     }
 
     @DeleteMapping("/{id}")

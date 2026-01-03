@@ -1,5 +1,6 @@
 package com.ealx.padroesprojetos.service.impl;
 
+import com.ealx.padroesprojetos.exception.ResourceNotFoundException;
 import com.ealx.padroesprojetos.model.Cliente;
 import com.ealx.padroesprojetos.model.Endereco;
 import com.ealx.padroesprojetos.repository.ClienteRepository;
@@ -15,10 +16,8 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Autowired
     private ClienteRepository clienteRepository;
-
     @Autowired
     private EnderecoRepository enderecoRepository;
-
     @Autowired
     private ViaCepService viaCepService;
 
@@ -29,63 +28,55 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     public Cliente buscarPorId(Long id) {
+        // Usando nossa exceção customizada aqui também!
         return clienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + id));
     }
 
     @Override
     @Transactional
     public void inserir(Cliente cliente) {
-
-        if (cliente.getEndereco() == null || cliente.getEndereco().getCep() == null) {
-            throw new IllegalArgumentException("CEP é obrigatório");
-        }
-
-        String cep = cliente.getEndereco().getCep();
-
-        Endereco endereco = enderecoRepository.findById(cep)
-                .orElseGet(() -> {
-                    Endereco novoEndereco = viaCepService.consultarCep(cep);
-                    if (novoEndereco == null) {
-                        throw new RuntimeException("CEP inválido: " + cep);
-                    }
-                    return enderecoRepository.save(novoEndereco);
-                });
-
-        cliente.setEndereco(endereco);
-        clienteRepository.save(cliente);
+        salvarClienteComCep(cliente);
     }
 
     @Override
     @Transactional
     public void atualizar(Long id, Cliente cliente) {
-
-        Cliente clienteBd = clienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-
-        if (cliente.getEndereco() == null || cliente.getEndereco().getCep() == null) {
-            throw new IllegalArgumentException("CEP é obrigatório");
-        }
-
+        // Busca o cliente existente
+        Cliente clienteBd = buscarPorId(id);
+        // Atualiza o nome
         clienteBd.setNome(cliente.getNome());
-
-        String cep = cliente.getEndereco().getCep();
-
-        Endereco endereco = enderecoRepository.findById(cep)
-                .orElseGet(() -> {
-                    Endereco novoEndereco = viaCepService.consultarCep(cep);
-                    if (novoEndereco == null) {
-                        throw new RuntimeException("CEP inválido: " + cep);
-                    }
-                    return enderecoRepository.save(novoEndereco);
-                });
-
-        clienteBd.setEndereco(endereco);
-        // NÃO precisa chamar save aqui por causa do @Transactional
+        // Prepara o endereço e salva
+        salvarClienteComCep(clienteBd);
     }
 
     @Override
     public void deletar(Long id) {
+        // Opcional: validar se o cliente existe antes de deletar
+        if (!clienteRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Impossível deletar: Cliente não encontrado.");
+        }
         clienteRepository.deleteById(id);
     }
+
+    // MÉTODO PRIVADO PARA REUTILIZAÇÃO DE LÓGICA
+    private void salvarClienteComCep(Cliente cliente) {
+        if (cliente.getEndereco() == null || cliente.getEndereco().getCep() == null) {
+            throw new IllegalArgumentException("CEP é obrigatório");
+        }
+
+        String cep = cliente.getEndereco().getCep();
+        Endereco endereco = enderecoRepository.findById(cep).orElseGet(() -> {
+            Endereco novoEndereco = viaCepService.consultarCep(cep);
+            // Aqui usamos a nossa exceção customizada!
+            if (novoEndereco == null || novoEndereco.getCep() == null) {
+                throw new ResourceNotFoundException("CEP inválido ou não encontrado: " + cep);
+            }
+            return enderecoRepository.save(novoEndereco);
+        });
+
+        cliente.setEndereco(endereco);
+        clienteRepository.save(cliente);
+    }
+
 }

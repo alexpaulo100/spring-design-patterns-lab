@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class ClienteServiceImplTest {
@@ -51,4 +52,37 @@ class ClienteServiceImplTest {
         verify(enderecoRepository).save(endereco);
         verify(clienteRepository).save(cliente);
     }
+
+    @Test
+    void testInserirClienteComCepInexistente() {
+        String cep = "00000000";
+        Cliente cliente = new Cliente();
+        cliente.setNome("Teste Erro");
+        Endereco endereco = new Endereco();
+        endereco.setCep(cep);
+        cliente.setEndereco(endereco);
+
+        /// 2. Mocks
+        when(enderecoRepository.findById(cep)).thenReturn(java.util.Optional.empty());
+
+        // Simula o erro
+        when(viaCepService.consultarCep(cep)).thenThrow(new RuntimeException("CEP inválido: " + cep));
+
+        // 3. Execução e Validação
+        assertThrows(RuntimeException.class, () -> {
+            clienteService.inserir(cliente);
+        });
+
+        // Verifica que o cliente NUNCA foi salvo, pois o erro interrompeu o fluxo
+        verify(clienteRepository, never()).save(any(Cliente.class));
+    }
+
+    @Test
+    void testDeletarCliente() {
+        Long id = 1L;
+        when(clienteRepository.existsById(id)).thenReturn(true);
+        clienteService.deletar(id);
+        verify(clienteRepository, times(1)).deleteById(id);
+    }
+
 }
