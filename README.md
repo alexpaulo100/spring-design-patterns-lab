@@ -1,6 +1,7 @@
 ## Lab Spring - Design Patterns, Testing & CI/CD
 Este repositório foi desenvolvido para o desafio de projeto do curso de Padrões de Projeto. A solução explora a integração entre o framework Spring e os conceitos de design patterns para criar uma aplicação robusta e escalável.
 
+[![Java CI with Maven](https://github.com/alexpaulo100/spring-design-patterns-lab/actions/workflows/maven.yml/badge.svg)](https://github.com/alexpaulo100/spring-design-patterns-lab/actions/workflows/maven.yml)
 ### 🎯 Objetivo do Projeto
 - Demonstrar a aplicação prática de padrões de projeto em um ecossistema Java moderno, focando em:
 
